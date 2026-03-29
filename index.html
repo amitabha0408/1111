@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>✨ 魔法咒語產生器 ✨</title>
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --bg: #F0FDF4; 
+      --card-bg: #FFFFFF;
+      --text: #1F2937;
+      --border: #E5E7EB;
+      --active-bg: #EEF2FF;
+      --active-border: #4F46E5;
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'PingFang TC', 'Microsoft JhengHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background-color 0.5s;
+    }
+
+    body.mode-music {
+      background-color: #FFFBEB;
+    }
+
+    .container {
+      max-width: 900px;
+      width: 100%;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      color: #374151;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .mode-switch {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+
+    .mode-btn {
+      padding: 16px 36px;
+      font-size: 1.8rem;
+      font-weight: bold;
+      border-radius: 50px;
+      border: 5px solid #E5E7EB;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #6B7280;
+    }
+
+    .mode-btn.active {
+      border-color: var(--primary);
+      background: var(--active-bg);
+      color: var(--primary);
+      transform: scale(1.05);
+      box-shadow: 0 10px 20px rgba(79,70,229,0.2);
+    }
+    
+    .mode-btn#btn-music.active {
+      border-color: #F59E0B;
+      background: #FEF3C7;
+      color: #B45309;
+    }
+
+    .preview-box {
+      background: var(--card-bg);
+      border: 6px solid var(--primary);
+      border-radius: 24px;
+      padding: 30px;
+      margin-bottom: 30px;
+      text-align: center;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+    }
+    
+    body.mode-music .preview-box { border-color: #F59E0B; }
+
+    .sentence-preview {
+      font-size: 2.2rem;
+      font-weight: bold;
+      margin-bottom: 20px;
+      line-height: 1.4;
+      color: #111827;
+    }
+
+    .prompt-output {
+      background: #F3F4F6;
+      padding: 16px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 1.1rem;
+      color: #6B7280;
+      word-break: break-all;
+      margin-bottom: 24px;
+    }
+
+    .copy-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 20px 40px;
+      font-size: 1.8rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 8px 15px rgba(79,70,229,0.3);
+    }
+    
+    .generate-btn {
+      background: #EC4899;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 20px 40px;
+      font-size: 1.8rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 8px 15px rgba(236,72,153,0.3);
+    }
+
+    .image-preview-container {
+      margin-top: 30px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .image-preview-container.show { display: flex; }
+
+    .preview-img {
+      max-width: 100%;
+      width: 512px;
+      border-radius: 20px;
+      border: 8px solid white;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; flex-wrap: wrap; }
+    .tab { padding: 12px 24px; font-size: 1.4rem; font-weight: bold; border-radius: 12px; border: none; cursor: pointer; }
+    .tab.active { background: #FEF3C7; color: #B45309; border: 2px solid #F59E0B; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+    .card { background: white; border: 4px solid #eee; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer; }
+    .card.active { border-color: var(--primary); background: var(--active-bg); transform: scale(1.05); }
+    .card-emoji { font-size: 4rem; }
+    .card-label { font-size: 1.5rem; font-weight: bold; }
+
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #10B981; color: white; padding: 15px 30px; border-radius: 30px; opacity: 0; transition: 0.3s; z-index: 2000; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1 id="main-title">✨ 魔法咒語產生器 ✨</h1>
+    
+    <div class="mode-switch">
+      <button id="btn-image" class="mode-btn active" onclick="switchMode('image')">🖼️ 畫圖片</button>
+      <button id="btn-music" class="mode-btn" onclick="switchMode('music')">🎵 做音樂</button>
+    </div>
+
+    <div class="preview-box">
+      <div class="sentence-preview" id="sentence">請從下方選擇圖卡...</div>
+      <div class="prompt-output" id="prompt">...</div>
+      <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+        <button class="copy-btn" id="copy-btn">🪄 複製咒語</button>
+        <button id="btn-gen-img" class="generate-btn" style="display: none;" onclick="generateImage()">🖼️ 看魔法變圖片</button>
+      </div>
+
+      <div id="img-preview-area" class="image-preview-container">
+        <div id="loading" style="font-size: 1.5rem; color: #4F46E5; font-weight: bold; margin-bottom: 10px;">✨ 魔法施放中...</div>
+        <img id="result-img" class="preview-img" src="" style="display: none;">
+        <div id="fallback-link" style="display: none; margin-top: 15px;">
+           <a id="btn-open-big" href="#" target="_blank" style="color: #4F46E5; font-weight: bold; text-decoration: underline;">🚀 如果圖沒出來，點這裡直接看大圖</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div id="toast" class="toast">✅ 複製成功！</div>
+
+  <script>
+    const data = {
+      image: {
+        character: [
+          { id: 'boy', label: '小男孩', emoji: '👦', prompt: 'a young cute boy' },
+          { id: 'girl', label: '小女孩', emoji: '👧', prompt: 'a young cute girl' },
+          { id: 'cat', label: '貓咪', emoji: '🐱', prompt: 'a cute fluffy cat' },
+          { id: 'dog', label: '狗狗', emoji: '🐶', prompt: 'a cute friendly dog' },
+          { id: 'robot', label: '機器人', emoji: '🤖', prompt: 'a friendly robot' },
+          { id: 'dinosaur', label: '恐龍', emoji: '🦖', prompt: 'a baby T-Rex dinosaur' }
+        ],
+        action: [
+          { id: 'running', label: '在奔跑', emoji: '🏃', prompt: 'running happily' },
+          { id: 'sleeping', label: '在睡覺', emoji: '💤', prompt: 'sleeping peacefully' },
+          { id: 'eating', label: '在吃東西', emoji: '🍔', prompt: 'eating delicious food' },
+          { id: 'flying', label: '在飛行', emoji: '🚀', prompt: 'flying in the sky' }
+        ],
+        location: [
+          { id: 'park', label: '在公園', emoji: '🏞️', prompt: 'in a sunny park' },
+          { id: 'space', label: '在太空', emoji: '🌌', prompt: 'in outer space' },
+          { id: 'beach', label: '在海灘', emoji: '🏖️', prompt: 'on a beautiful tropical beach' },
+          { id: 'castle', label: '在城堡', emoji: '🏰', prompt: 'inside a giant magical castle' }
+        ]
+      },
+      music: {
+        mood: [
+          { id: 'happy', label: '開心快樂', emoji: '😄', prompt: 'happy, upbeat' },
+          { id: 'sleepy', label: '想睡覺', emoji: '😴', prompt: 'soothing lullaby' }
+        ],
+        instrument: [
+          { id: 'piano', label: '鋼琴', emoji: '🎹', prompt: 'piano melody' },
+          { id: 'guitar', label: '吉他', emoji: '🎸', prompt: 'acoustic guitar' }
+        ],
+        genre: [
+          { id: 'nursery', label: '可愛兒歌', emoji: '👶', prompt: 'nursery rhyme' },
+          { id: 'game', label: '電玩音樂', emoji: '🕹️', prompt: '8-bit game music' }
+        ],
+        lyrics: [
+          { id: 'friendship', label: '好朋友', emoji: '🤝', prompt: 'about friendship' },
+          { id: 'family', label: '愛家人', emoji: '❤️', prompt: 'about loving family' }
+        ]
+      }
+    };
+
+    let currentMode = 'image';
+    let states = {
+      image: { character: null, action: null, location: null, currentTab: 'character' },
+      music: { mood: null, instrument: null, genre: null, lyrics: null, currentTab: 'mood' }
+    };
+
+    function switchMode(mode) {
+      currentMode = mode;
+      document.getElementById('btn-image').classList.toggle('active', mode === 'image');
+      document.getElementById('btn-music').classList.toggle('active', mode === 'music');
+      document.body.classList.toggle('mode-music', mode === 'music');
+      document.getElementById('main-title').textContent = mode === 'music' ? '✨ 魔法兒歌產生器 ✨' : '✨ 魔法圖片產生器 ✨';
+      document.getElementById('btn-gen-img').style.display = mode === 'image' ? 'inline-block' : 'none';
+      renderTabs(); renderGrid(); updatePreview();
+    }
+
+    function renderTabs() {
+      const container = document.getElementById('tabs');
+      container.innerHTML = '';
+      const tabConfigs = {
+        image: [{id:'character', label:'1. 角色'}, {id:'action', label:'2. 動作'}, {id:'location', label:'3. 地點'}],
+        music: [{id:'mood', label:'1. 心情'}, {id:'instrument', label:'2. 樂器'}, {id:'genre', label:'3. 風格'}, {id:'lyrics', label:'4. 歌詞'}]
+      };
+      tabConfigs[currentMode].forEach(tab => {
+        const btn = document.createElement('button');
+        btn.className = `tab ${states[currentMode].currentTab === tab.id ? 'active' : ''}`;
+        btn.textContent = tab.label;
+        btn.onclick = () => { states[currentMode].currentTab = tab.id; renderTabs(); renderGrid(); };
+        container.appendChild(btn);
+      });
+    }
+
+    function renderGrid() {
+      const container = document.getElementById('grid');
+      container.innerHTML = '';
+      const state = states[currentMode];
+      data[currentMode][state.currentTab].forEach(item => {
+        const card = document.createElement('div');
+        card.className = `card ${state[state.currentTab]?.id === item.id ? 'active' : ''}`;
+        card.innerHTML = `<div class="card-emoji">${item.emoji}</div><div class="card-label">${item.label}</div>`;
+        card.onclick = () => {
+          state[state.currentTab] = state[state.currentTab]?.id === item.id ? null : item;
+          updatePreview(); renderGrid();
+        };
+        container.appendChild(card);
+      });
+    }
+
+    function updatePreview() {
+      const state = states[currentMode];
+      let chinese = []; let english = [];
+      if (currentMode === 'image') {
+        if(state.character) { chinese.push(state.character.label); english.push(state.character.prompt); }
+        if(state.action) { chinese.push(state.action.label); english.push(state.action.prompt); }
+        if(state.location) { chinese.push(state.location.label); english.push(state.location.prompt); }
+        if(english.length > 0) english.push("cute 3D cartoon style, masterpiece");
+      } else {
+        if(state.mood) { chinese.push(state.mood.label); english.push(state.mood.prompt); }
+        if(state.genre) { chinese.push(state.genre.label); english.push(state.genre.prompt); }
+        if(state.lyrics) { chinese.push("唱著" + state.lyrics.label); english.push("vocal, children voices, rhyming"); }
+      }
+      document.getElementById('sentence').textContent = chinese.length > 0 ? chinese.join(' ') : '👆 請選擇圖卡...';
+      document.getElementById('prompt').textContent = english.length > 0 ? english.join(', ') : '...';
+      document.getElementById('btn-gen-img').style.display = (currentMode === 'image' && english.length > 0) ? 'inline-block' : 'none';
+    }
+
+    async function generateImage() {
+      const prompt = document.getElementById('prompt').textContent;
+      const area = document.getElementById('img-preview-area');
+      const loading = document.getElementById('loading');
+      const img = document.getElementById('result-img');
+      const fallback = document.getElementById('fallback-link');
+      const bigBtn = document.getElementById('btn-open-big');
+
+      area.classList.add('show');
+      loading.innerHTML = '✨ 正在透過 Google 代理站傳輸圖片，請稍候...';
+      loading.style.display = 'block';
+      img.style.display = 'none';
+      fallback.style.display = 'none';
+
+      const seed = Math.floor(Math.random() * 999999);
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seed}&width=512&height=512&nologo=true`;
+      const proxyUrl = `https://images1-focus-opensocial.googleusercontent.com/gadgets/proxy?container=focus&url=${encodeURIComponent(url)}`;
+
+      bigBtn.href = url;
+      img.onload = () => { loading.style.display = 'none'; img.style.display = 'block'; fallback.style.display = 'block'; };
+      img.onerror = () => { loading.innerHTML = '❌ 即使繞道也被擋住了。請點下方按鈕看圖，或是這時候 Safari/Firefox 比較管用。'; fallback.style.display = 'block'; };
+      img.src = proxyUrl;
+    }
+
+    function copyPrompt() {
+      const text = document.getElementById('prompt').textContent;
+      if (text === '...') return;
+      navigator.clipboard.writeText(text).then(() => {
+        const toast = document.getElementById('toast');
+        toast.className = 'toast show';
+        setTimeout(() => toast.className = 'toast', 2000);
+      });
+    }
+
+    document.getElementById('copy-btn').onclick = copyPrompt;
+    switchMode('image');
+  </script>
+</body>
+</html>
